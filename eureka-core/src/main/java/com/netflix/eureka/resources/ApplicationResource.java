@@ -182,7 +182,7 @@ public class ApplicationResource {
                 }
             }
         }
-
+        // 注册逻辑
         registry.register(info, "true".equals(isReplication));
         return Response.status(204).build();  // 204 to be backwards compatible
     }

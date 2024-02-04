@@ -151,13 +151,18 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
 
     @Override
     public void init(PeerEurekaNodes peerEurekaNodes) throws Exception {
+        // 定时清零任务启动
         this.numberOfReplicationsLastMin.start();
         this.peerEurekaNodes = peerEurekaNodes;
+        // 初始化服务注册缓存
         initializedResponseCache();
+        // 更新续约数
         scheduleRenewalThresholdUpdateTask();
+        // 初始化其他RegionRegistry
         initRemoteRegionRegistry();
 
         try {
+            // JMX监控注册
             Monitors.registerObject(this);
         } catch (Throwable e) {
             logger.warn("Cannot register the JMX monitor for the InstanceRegistry :", e);
@@ -196,6 +201,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
         timer.schedule(new TimerTask() {
                            @Override
                            public void run() {
+                               // 定时更新续约阈值
                                updateRenewalThreshold();
                            }
                        }, serverConfig.getRenewalThresholdUpdateIntervalMs(),
@@ -537,6 +543,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             int count = 0;
             for (Application app : apps.getRegisteredApplications()) {
                 for (InstanceInfo instance : app.getInstances()) {
+                    // 判断注册服务是否注册到本实例
                     if (this.isRegisterable(instance)) {
                         ++count;
                     }
@@ -628,6 +635,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * traffic to this node.
      *
      */
+    //实现集群数据同步
     private void replicateToPeers(Action action, String appName, String id,
                                   InstanceInfo info /* optional */,
                                   InstanceStatus newStatus /* optional */, boolean isReplication) {

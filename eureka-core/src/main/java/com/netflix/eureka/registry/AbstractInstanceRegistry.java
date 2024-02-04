@@ -134,10 +134,12 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     @Override
     public synchronized void initializedResponseCache() {
         if (responseCache == null) {
+            // 创建ResponseCacheImpl
             responseCache = new ResponseCacheImpl(serverConfig, serverCodecs, this);
         }
     }
 
+    // 将配置文件中RemoteRegionUrlsWithName配置参数，转换为RemoteRegistry
     protected void initRemoteRegionRegistry() throws MalformedURLException {
         Map<String, String> remoteRegionUrlsWithName = serverConfig.getRemoteRegionUrlsWithName();
         if (!remoteRegionUrlsWithName.isEmpty()) {
@@ -198,6 +200,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     public void register(InstanceInfo registrant, int leaseDuration, boolean isReplication) {
         read.lock();
         try {
+            // registry 所有的注册信息存储地址 gMap 通过服务名拿到的微服务组
             Map<String, Lease<InstanceInfo>> gMap = registry.get(registrant.getAppName());
             REGISTER.increment(isReplication);
             if (gMap == null) {
@@ -207,10 +210,13 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                     gMap = gNewMap;
                 }
             }
+            // 已经存在的微服务实例对象
             Lease<InstanceInfo> existingLease = gMap.get(registrant.getId());
             // Retain the last dirty timestamp without overwriting it, if there is already a lease
             if (existingLease != null && (existingLease.getHolder() != null)) {
+                // 当前存在的微服务实例对象的最后操作时间戳
                 Long existingLastDirtyTimestamp = existingLease.getHolder().getLastDirtyTimestamp();
+                // 传过来的注册实例的时间戳
                 Long registrationLastDirtyTimestamp = registrant.getLastDirtyTimestamp();
                 logger.debug("Existing lease found (existing={}, provided={}", existingLastDirtyTimestamp, registrationLastDirtyTimestamp);
 
@@ -228,6 +234,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                     if (this.expectedNumberOfClientsSendingRenews > 0) {
                         // Since the client wants to register it, increase the number of clients sending renews
                         this.expectedNumberOfClientsSendingRenews = this.expectedNumberOfClientsSendingRenews + 1;
+                        // 每分钟续约数阈值更新
                         updateRenewsPerMinThreshold();
                     }
                 }
@@ -237,6 +244,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             if (existingLease != null) {
                 lease.setServiceUpTimestamp(existingLease.getServiceUpTimestamp());
             }
+            // 服务注册
             gMap.put(registrant.getId(), lease);
             recentRegisteredQueue.add(new Pair<Long, String>(
                     System.currentTimeMillis(),
@@ -387,6 +395,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 }
             }
             renewsLastMin.increment();
+            // 更新续约有效期
             leaseToRenew.renew();
             return true;
         }
@@ -1219,6 +1228,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         if (evictionTaskRef.get() != null) {
             evictionTaskRef.get().cancel();
         }
+        // 定时剔除超时信息
         evictionTaskRef.set(new EvictionTask());
         evictionTimer.schedule(evictionTaskRef.get(),
                 serverConfig.getEvictionIntervalTimerInMs(),

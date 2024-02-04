@@ -127,8 +127,10 @@ public class ResponseCacheImpl implements ResponseCache {
         this.registry = registry;
 
         long responseCacheUpdateIntervalMs = serverConfig.getResponseCacheUpdateIntervalMs();
+        // readWriteCacheMap 初始化，设置缓存过期时间，和默认加载方法
         this.readWriteCacheMap =
                 CacheBuilder.newBuilder().initialCapacity(serverConfig.getInitialCapacityOfResponseCache())
+                        // 设置过期时间
                         .expireAfterWrite(serverConfig.getResponseCacheAutoExpirationInSeconds(), TimeUnit.SECONDS)
                         .removalListener(new RemovalListener<Key, Value>() {
                             @Override
@@ -147,12 +149,14 @@ public class ResponseCacheImpl implements ResponseCache {
                                     Key cloneWithNoRegions = key.cloneWithoutRegions();
                                     regionSpecificKeys.put(cloneWithNoRegions, key);
                                 }
+                                // 默认加载方法, 从InstanceRegistry的缓存加载
                                 Value value = generatePayload(key);
                                 return value;
                             }
                         });
 
         if (shouldUseReadOnlyResponseCache) {
+            // 定时更新缓存readWriteCacheMap 到readOnlyCacheMap
             timer.schedule(getCacheUpdateTask(),
                     new Date(((System.currentTimeMillis() / responseCacheUpdateIntervalMs) * responseCacheUpdateIntervalMs)
                             + responseCacheUpdateIntervalMs),
@@ -160,6 +164,7 @@ public class ResponseCacheImpl implements ResponseCache {
         }
 
         try {
+            // JMX 监控
             Monitors.registerObject(this);
         } catch (Throwable e) {
             logger.warn("Cannot register the JMX monitor for the InstanceRegistry", e);
@@ -180,6 +185,7 @@ public class ResponseCacheImpl implements ResponseCache {
                         CurrentRequestVersion.set(key.getVersion());
                         Value cacheValue = readWriteCacheMap.get(key);
                         Value currentCacheValue = readOnlyCacheMap.get(key);
+                        // 更新缓存readWriteCacheMap 到readOnlyCacheMap
                         if (cacheValue != currentCacheValue) {
                             readOnlyCacheMap.put(key, cacheValue);
                         }

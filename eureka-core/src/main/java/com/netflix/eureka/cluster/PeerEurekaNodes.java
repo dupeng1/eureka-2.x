@@ -72,6 +72,7 @@ public abstract class PeerEurekaNodes {
     }
 
     public void start() {
+        // 单独的线程池
         taskExecutor = Executors.newSingleThreadScheduledExecutor(
                 new ThreadFactory() {
                     @Override
@@ -88,6 +89,7 @@ public abstract class PeerEurekaNodes {
                 @Override
                 public void run() {
                     try {
+                        // 定时更新集群中Eureka Server实例信息
                         updatePeerEurekaNodes(resolvePeerUrls());
                     } catch (Throwable e) {
                         logger.error("Cannot update the replica Nodes", e);
@@ -127,11 +129,14 @@ public abstract class PeerEurekaNodes {
      * @return peer URLs with node's own URL filtered out
      */
     protected List<String> resolvePeerUrls() {
+        // 当前实例信息
         InstanceInfo myInfo = applicationInfoManager.getInfo();
+        // 获取当前实例所属的zone
         String zone = InstanceInfo.getZone(clientConfig.getAvailabilityZones(clientConfig.getRegion()), myInfo);
+        // 获取当前zone下的eureka server urls
         List<String> replicaUrls = EndpointUtils
                 .getDiscoveryServiceUrls(clientConfig, zone, new EndpointUtils.InstanceInfoBasedUrlRandomizer(myInfo));
-
+        // 去掉当前实例url
         int idx = 0;
         while (idx < replicaUrls.size()) {
             if (isThisMyUrl(replicaUrls.get(idx))) {
@@ -159,14 +164,14 @@ public abstract class PeerEurekaNodes {
         toShutdown.removeAll(newPeerUrls);
         Set<String> toAdd = new HashSet<>(newPeerUrls);
         toAdd.removeAll(peerEurekaNodeUrls);
-
+        // 判断集群实例是否有变化，判断方法通过两个差集是否为空，简单方便值得借鉴
         if (toShutdown.isEmpty() && toAdd.isEmpty()) { // No change
             return;
         }
 
         // Remove peers no long available
         List<PeerEurekaNode> newNodeList = new ArrayList<>(peerEurekaNodes);
-
+        // 去掉不存在的实例
         if (!toShutdown.isEmpty()) {
             logger.info("Removing no longer available peer nodes {}", toShutdown);
             int i = 0;
@@ -182,6 +187,7 @@ public abstract class PeerEurekaNodes {
         }
 
         // Add new peers
+        // 添加新的实例
         if (!toAdd.isEmpty()) {
             logger.info("Adding new peer nodes {}", toAdd);
             for (String peerUrl : toAdd) {
