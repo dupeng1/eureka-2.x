@@ -1,0 +1,24 @@
+apply plugin: 'java-library'
+
+def archaius2Version = '2.1.7'
+
+sourceSets {
+    test {
+        resources.srcDir file('src/main/resources')
+    }
+}
+
+dependencies {
+    api project(':eureka-client')
+
+    // archaius2
+    api "com.netflix.archaius:archaius2-core:${archaius2Version}"
+    api "com.netflix.archaius:archaius2-api:${archaius2Version}"
+
+    testImplementation project(':eureka-test-utils')
+
+    testImplementation "junit:junit:${junit_version}"
+    testImplementation 'org.mortbay.jetty:jetty:6.1H.22'
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.mock-server:mockserver-netty:${mockserverVersion}"
+}

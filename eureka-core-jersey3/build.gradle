@@ -1,0 +1,26 @@
+apply plugin: 'java-library'
+
+configurations.all {
+    exclude module: 'jsr311-api'
+    exclude group: 'com.sun.jersey'
+    exclude group: 'com.sun.jersey.contribs'
+}
+
+dependencies {
+    api project(':eureka-core')
+    api project(':eureka-client-jersey3')
+    api 'org.glassfish.jersey.core:jersey-client:3.0.5'
+    api 'org.glassfish.jersey.connectors:jersey-apache-connector:3.0.5'
+
+    testImplementation (project(':eureka-test-utils')) {
+        // exclude all transitives to avoid bringing in jersey1 eureka-core
+        transitive = false
+    }
+    // bring in jersey3 compatible eureka-core-jersey3 directly
+    testImplementation project(':eureka-core-jersey3')
+
+    testImplementation "junit:junit:${junit_version}"
+    testImplementation "org.mock-server:mockserver-netty:${mockserverVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testRuntimeOnly 'org.slf4j:slf4j-simple:1.7.10'
+}

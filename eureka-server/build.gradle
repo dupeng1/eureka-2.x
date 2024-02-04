@@ -1,0 +1,33 @@
+apply plugin: 'war'
+
+dependencies {
+    implementation project(':eureka-client-jersey3')
+    implementation project(':eureka-core-jersey3')
+    // implementation "com.sun.jersey:jersey-server:$jerseyVersion"
+    // implementation "com.sun.jersey:jersey-servlet:$jerseyVersion"
+    implementation 'org.slf4j:slf4j-log4j12:1.6.1'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.3'
+
+    runtimeOnly 'xerces:xercesImpl:2.12.0'
+    runtimeOnly "org.codehaus.jettison:jettison:${jettisonVersion}"
+
+    providedCompile "jakarta.servlet:jakarta.servlet-api:$servletVersion"
+
+    testImplementation project(':eureka-test-utils')
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.eclipse.jetty:jetty-server:$jetty_version"
+    testImplementation "org.eclipse.jetty:jetty-webapp:$jetty_version"
+    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.0-beta1'
+}
+
+task copyLibs(type: Copy) {
+    into 'testlibs/WEB-INF/libs'
+    from configurations.runtimeClasspath
+}
+
+war {
+    from (project(':eureka-resources').file('build/resources/main'))
+}
+
+// Integration test loads eureka war, so it must be ready prior to running tests
+test.dependsOn war

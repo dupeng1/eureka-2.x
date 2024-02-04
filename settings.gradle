@@ -1,0 +1,11 @@
+rootProject.name='eureka' 
+include 'eureka-client',
+        'eureka-client-jersey3',
+        'eureka-client-archaius2',
+        'eureka-server',
+        'eureka-core',
+        'eureka-core-jersey3',
+        'eureka-resources',
+        'eureka-examples',
+        'eureka-test-utils',
+        'eureka-tests'
