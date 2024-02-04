@@ -36,6 +36,7 @@ public interface EurekaClient extends LookupService {
      * @return an {@link com.netflix.discovery.shared.Applications} for the matching region. a Null value
      *         is treated as the local region.
      */
+    //获取指定region下的Applications对象
     public Applications getApplicationsForARegion(@Nullable String region);
 
     /**
@@ -44,6 +45,7 @@ public interface EurekaClient extends LookupService {
      * @param serviceUrl The string representation of the service url.
      * @return The registry information containing all applications.
      */
+    //根据serviceUrl获取Applications 对象
     public Applications getApplications(String serviceUrl);
 
     /**
@@ -53,6 +55,7 @@ public interface EurekaClient extends LookupService {
      * @param secure true if it is a secure vip address, false otherwise
      * @return - The list of {@link InstanceInfo} objects matching the criteria
      */
+    //获取匹配VIP地址的InstanceInfo集合
     public List<InstanceInfo> getInstancesByVipAddress(String vipAddress, boolean secure);
 
     /**
@@ -65,6 +68,7 @@ public interface EurekaClient extends LookupService {
      *
      * @return - The list of {@link InstanceInfo} objects matching the criteria, empty list if not instances found.
      */
+    //获取匹配VIP地址、region的InstanceInfo集合
     public List<InstanceInfo> getInstancesByVipAddress(String vipAddress, boolean secure, @Nullable String region);
 
     /**
@@ -77,6 +81,7 @@ public interface EurekaClient extends LookupService {
      * @param secure true if it is a secure vip address, false otherwise.
      * @return - The list of {@link InstanceInfo} objects matching the criteria.
      */
+    //获取匹配VIP地址、appName的InstanceInfo集合
     public List<InstanceInfo> getInstancesByVipAddressAndAppName(String vipAddress, String appName, boolean secure);
 
     // ==========================
@@ -86,11 +91,13 @@ public interface EurekaClient extends LookupService {
     /**
      * @return in String form all regions (local + remote) that can be accessed by this client
      */
+    //获取能够被当前客户端访问的所有region，包括local和remote
     public Set<String> getAllKnownRegions();
 
     /**
      * @return the current self instance status as seen on the Eureka server.
      */
+    //Eureka服务端当前实例的状态
     public InstanceInfo.InstanceStatus getInstanceRemoteStatus();
 
     /**
@@ -101,6 +108,7 @@ public interface EurekaClient extends LookupService {
      * @param zone the zone in which the client resides
      * @return The list of all eureka service urls for the eureka client to talk to.
      */
+    //该方法已经迁移到了EndpointUtils类中，获取当前客户端所在zone的所有可以通信的Eureka服务端的URL集合
     @Deprecated
     public List<String> getDiscoveryServiceUrls(String zone);
 
@@ -113,6 +121,7 @@ public interface EurekaClient extends LookupService {
      * @param preferSameZone true if we have to prefer the same zone as the client, false otherwise
      * @return The list of all eureka service urls for the eureka client to talk to
      */
+    //该方法已经迁移到了EndpointUtils类中，获取当前客户端所在zone的所有可以通信的Eureka服务端的URL集合（在配置文件中配置的URL）
     @Deprecated
     public List<String> getServiceUrlsFromConfig(String instanceZone, boolean preferSameZone);
 
@@ -128,6 +137,7 @@ public interface EurekaClient extends LookupService {
      * @param preferSameZone true if we have to prefer the same zone as the client, false otherwise.
      * @return The list of all eureka service urls for the eureka client to talk to.
      */
+    //该方法已经迁移到了EndpointUtils类中，获取当前客户端所在zone的所有可以通信的Eureka服务端的URL集合（从DNS中）
     @Deprecated
     public List<String> getServiceUrlsFromDNS(String instanceZone, boolean preferSameZone);
 
@@ -146,6 +156,7 @@ public interface EurekaClient extends LookupService {
      *
      * @param callback app specific healthcheck.
      */
+    //标记过期，已迁移到com.netflix.appinfo.HealthCheckHandler类，为客户端提供注册HealthCheckCallback。
     @Deprecated
     public void registerHealthCheckCallback(HealthCheckCallback callback);
 
@@ -159,6 +170,7 @@ public interface EurekaClient extends LookupService {
      *
      * @param healthCheckHandler app specific healthcheck handler.
      */
+    //注册HealthCheckHandler
     public void registerHealthCheck(HealthCheckHandler healthCheckHandler);
 
     /**
@@ -173,6 +185,7 @@ public interface EurekaClient extends LookupService {
      * 
      * @param eventListener
      */
+    //注册EurekaEventListener，用于监控客户端内部的状态变化
     public void registerEventListener(EurekaEventListener eventListener);
     
     /**
@@ -182,11 +195,13 @@ public interface EurekaClient extends LookupService {
      * @param eventListener
      * @return True if removed otherwise false if the listener was never registered.
      */
+    //解除注册的EurekaEventListener
     public boolean unregisterEventListener(EurekaEventListener eventListener);
     
     /**
      * @return the current registered healthcheck handler
      */
+    //获取注册的HealthCheckHandler 对象
     public HealthCheckHandler getHealthCheckHandler();
 
     // =============
@@ -196,15 +211,18 @@ public interface EurekaClient extends LookupService {
     /**
      * Shuts down Eureka Client. Also sends a deregistration request to the eureka server.
      */
+    //关闭客户端
     public void shutdown();
     
     /**
      * @return the configuration of this eureka client
      */
+    //获取客户端配置对象EurekaClientConfig
     public EurekaClientConfig getEurekaClientConfig();
     
     /**
      * @return the application info manager of this eureka client
      */
+    //获取ApplicationInfoManager对象
     public ApplicationInfoManager getApplicationInfoManager();
 }

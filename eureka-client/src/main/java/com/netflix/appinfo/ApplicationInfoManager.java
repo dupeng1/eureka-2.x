@@ -44,6 +44,10 @@ import org.slf4j.LoggerFactory;
  * @author Karthik Ranganathan, Greg Kim
  *
  */
+
+/**
+ * 作为应用信息管理器，管理服务实例的信息类InstanceInfo和服务实例的配置信息类EurekaInstanceConfig
+ */
 @Singleton
 public class ApplicationInfoManager {
     private static final Logger logger = LoggerFactory.getLogger(ApplicationInfoManager.class);
@@ -121,6 +125,7 @@ public class ApplicationInfoManager {
     public void initComponent(EurekaInstanceConfig config) {
         try {
             this.config = config;
+            //通过EurekaInstanceConfig构建instanceInfo
             this.instanceInfo = new EurekaConfigBasedInstanceInfoProvider(config).get();
         } catch (Throwable e) {
             throw new RuntimeException("Failed to initialize ApplicationInfoManager", e);

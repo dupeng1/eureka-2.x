@@ -50,6 +50,10 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
  * @author Karthik Ranganathan
  *
  */
+
+/**
+ * 保存着一个特定微服务的所有提供者实例，对InstanceInfo的操作都是同步的，为的是保证其原子性
+ */
 @Serializer("com.netflix.discovery.converters.EntityBodyConverter")
 @XStreamAlias("application")
 @JsonRootName("application")
@@ -63,17 +67,19 @@ public class Application {
                 + ", instances=" + instances + ", shuffledInstances="
                 + shuffledInstances + ", instancesMap=" + instancesMap + "]";
     }
-
+    //服务名
     private String name;
-
+    // 标识服务状态
     @XStreamOmitField
     private volatile boolean isDirty = false;
 
+    // 保存着当前name所指定的微服务名称的所有InstanceInfo
     @XStreamImplicit
     private final Set<InstanceInfo> instances;
 
     private final AtomicReference<List<InstanceInfo>> shuffledInstances;
 
+    // key为instanceId，value为instanceInfo
     private final Map<String, InstanceInfo> instancesMap;
 
     public Application() {

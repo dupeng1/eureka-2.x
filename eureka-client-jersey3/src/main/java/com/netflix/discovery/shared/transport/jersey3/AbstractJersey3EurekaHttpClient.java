@@ -50,6 +50,11 @@ import static com.netflix.discovery.shared.transport.EurekaHttpResponse.anEureka
 /**
  * @author Tomasz Bak
  */
+
+/**
+ * 这里面是各种网络请求的具体实现，EurekaHttpClientDecorator类中的getApplications、register、sendHeartBeat
+ * 等方法对应的网络请求响应逻辑在AbstractJerseyEurekaHttpClient中都有具体实现
+ */
 public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractJersey3EurekaHttpClient.class);
@@ -134,6 +139,7 @@ public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClien
         String urlPath = "apps/" + appName + '/' + id;
         Response response = null;
         try {
+            //请求参数有两个：Eureka client自身状态、自身关键信息（状态、元数据等）最后一次变化的时间
             WebTarget webResource = jerseyClient.target(serviceUrl)
                     .path(urlPath)
                     .queryParam("status", info.getStatus().toString())
@@ -145,6 +151,7 @@ public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClien
             addExtraProperties(requestBuilder);
             addExtraHeaders(requestBuilder);
             requestBuilder.accept(MediaType.APPLICATION_JSON_TYPE);
+            //注意：这里不是POST，也不是GET，而是PUT
             response = requestBuilder.put(Entity.entity("{}", MediaType.APPLICATION_JSON_TYPE)); // Jersey3 refuses to handle PUT with no body
             EurekaHttpResponseBuilder<InstanceInfo> eurekaResponseBuilder = anEurekaHttpResponse(response.getStatus(), InstanceInfo.class).headers(headersOf(response));
             if (response.hasEntity()) {
@@ -210,11 +217,17 @@ public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClien
 
     @Override
     public EurekaHttpResponse<Applications> getApplications(String... regions) {
+        //取全量数据的path是""apps"
         return getApplicationsInternal("apps/", regions);
     }
 
     @Override
     public EurekaHttpResponse<Applications> getDelta(String... regions) {
+        // 取增量数据的path是""apps/delta"
+        // 一般的增量更新是在请求中增加一个时间戳或者上次更新的tag号等参数，由服务端根据参数来判断哪些数据是客户端没有的
+        // 而这里的Eureka client却没有这类参数，联想到前面官方文档中提到的“Eureka会把更新数据保留三分钟”，
+        // 就可以理解了：Eureka把最近的变更数据保留三分钟，这三分钟内每个Eureka client来请求增量更新时，server都返回同样的缓存数据，
+        // 只要client能保证三分钟之内有一次请求，就能保证自己的数据和Eureka server端的保持一致
         return getApplicationsInternal("apps/delta", regions);
     }
 
@@ -253,9 +266,11 @@ public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClien
         }
     }
 
+    //具体的请求响应处理都在此方法中
     private EurekaHttpResponse<Applications> getApplicationsInternal(String urlPath, String[] regions) {
         Response response = null;
         try {
+            //jersey、resource这些关键词都预示着这是个restful请求
             WebTarget webTarget = jerseyClient.target(serviceUrl).path(urlPath);
             if (regions != null && regions.length > 0) {
                 webTarget = webTarget.queryParam("regions", StringUtil.join(regions));
@@ -263,10 +278,12 @@ public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClien
             Builder requestBuilder = webTarget.request();
             addExtraProperties(requestBuilder);
             addExtraHeaders(requestBuilder);
+            //发起网络请求，将响应封装成ClientResponse实例
             response = requestBuilder.accept(MediaType.APPLICATION_JSON_TYPE).get();
 
             Applications applications = null;
             if (response.getStatus() == Status.OK.getStatusCode() && response.hasEntity()) {
+                //取得全部应用信息
                 applications = response.readEntity(Applications.class);
             }
             return anEurekaHttpResponse(response.getStatus(), applications).headers(headersOf(response)).build();

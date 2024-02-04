@@ -53,6 +53,9 @@ import org.slf4j.LoggerFactory;
 @Serializer("com.netflix.discovery.converters.EntityBodyConverter")
 @XStreamAlias("instance")
 @JsonRootName("instance")
+/**
+ * 封装将被发送到Eureka Server进行服务注册的服务实例元数据，它在Eureka Server的注册表中代表一个服务实例，其他服务实例可以根据InstanceInfo了解该服务实例的相关信息从而发发起服务请求
+ */
 public class InstanceInfo {
 
     private static final String VERSION_UNKNOWN = "unknown";
@@ -134,7 +137,9 @@ public class InstanceInfo {
     private volatile boolean isUnsecurePortEnabled = true;
     private volatile DataCenterInfo dataCenterInfo;
     private volatile String hostName;
+    // 记录当前Client在Server端的状态
     private volatile InstanceStatus status = InstanceStatus.UP;
+    // 该状态用于计算Client在Server端的状态status(在Client提交注册请求与Renew续约请求时)
     private volatile InstanceStatus overriddenStatus = InstanceStatus.UNKNOWN;
     @XStreamOmitField
     private volatile boolean isInstanceInfoDirty = false;
@@ -143,8 +148,10 @@ public class InstanceInfo {
     private volatile Boolean isCoordinatingDiscoveryServer = Boolean.FALSE;
     @XStreamAlias("metadata")
     private volatile Map<String, String> metadata;
+    // 记录当前InstanceInfo在Server端被修改的时间戳
     @Auto
     private volatile Long lastUpdatedTimestamp;
+    // 记录当前InstanceInfo在Client端被修改的时间戳
     @Auto
     private volatile Long lastDirtyTimestamp;
     @Auto
@@ -339,6 +346,7 @@ public class InstanceInfo {
         return (id == null) ? 31 : (id.hashCode() + 31);
     }
 
+    //重写了euqals()方法：只要两个InstanceInfo的instanceId相同，那么这两个 InstanceInfo就相同
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {

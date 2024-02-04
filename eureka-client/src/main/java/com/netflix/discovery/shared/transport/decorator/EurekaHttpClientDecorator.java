@@ -26,6 +26,10 @@ import com.netflix.discovery.shared.transport.EurekaHttpResponse;
 /**
  * @author Tomasz Bak
  */
+
+/**
+ * 装饰者模式的实现，各类远程服务都在此被封装成API了
+ */
 public abstract class EurekaHttpClientDecorator implements EurekaHttpClient {
 
     public enum RequestType {
@@ -51,6 +55,7 @@ public abstract class EurekaHttpClientDecorator implements EurekaHttpClient {
 
     protected abstract <R> EurekaHttpResponse<R> execute(RequestExecutor<R> requestExecutor);
 
+    //注册
     @Override
     public EurekaHttpResponse<Void> register(final InstanceInfo info) {
         return execute(new RequestExecutor<Void>() {
@@ -81,6 +86,7 @@ public abstract class EurekaHttpClientDecorator implements EurekaHttpClient {
         });
     }
 
+    //续租
     @Override
     public EurekaHttpResponse<InstanceInfo> sendHeartBeat(final String appName,
                                                           final String id,
@@ -89,6 +95,7 @@ public abstract class EurekaHttpClientDecorator implements EurekaHttpClient {
         return execute(new RequestExecutor<InstanceInfo>() {
             @Override
             public EurekaHttpResponse<InstanceInfo> execute(EurekaHttpClient delegate) {
+                //网络处理委托给代理类完成
                 return delegate.sendHeartBeat(appName, id, info, overriddenStatus);
             }
 
@@ -139,6 +146,7 @@ public abstract class EurekaHttpClientDecorator implements EurekaHttpClient {
 
             @Override
             public RequestType getRequestType() {
+                //本次向Eureka server请求的类型：获取服务列表
                 return RequestType.GetApplications;
             }
         });

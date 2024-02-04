@@ -37,6 +37,11 @@ import java.util.Map;
  * @author Karthik Ranganathan
  *
  */
+
+/**
+ * 封装Eureka Client自身服务实例的配置信息，主要用于构建InstanceInfo，主要用于构建InstanceInfo，spring cloud通过EurekaInstanceConfigBean配置类提供了默认配置
+ * 通常这些信息在配置文件中的eureka.instance前缀下进行设置
+ */
 public interface EurekaInstanceConfig {
 
     /**

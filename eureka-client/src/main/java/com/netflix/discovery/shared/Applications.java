@@ -60,6 +60,7 @@ import com.thoughtworks.xstream.annotations.XStreamImplicit;
  * @author Karthik Ranganathan
  *
  */
+//来自于Eureka Server的所有注册信息，我们可以称其为“客户端注册表”，之所以要强调“客户端”是因为服务端的注册表不是这样表示的，是一个Map，其间的操作也都是同步的
 @Serializer("com.netflix.discovery.converters.EntityBodyConverter")
 @XStreamAlias("applications")
 @JsonRootName("applications")
@@ -84,6 +85,7 @@ public class Applications {
     private Long versionDelta;
     @XStreamImplicit
     private final AbstractQueue<Application> applications;
+    // key为微服务名称，value为Application
     private final Map<String, Application> appNameApplicationMap;
     private final Map<String, VipIndexSupport> virtualHostNameAppMap;
     private final Map<String, VipIndexSupport> secureVirtualHostNameAppMap;
@@ -355,6 +357,7 @@ public class Applications {
             AbstractQueue<InstanceInfo> vipInstances = vipIndexSupport.instances;
             final List<InstanceInfo> filteredInstances;
             if (filterUpInstances) {
+                //只保留状态为UP的服务
                 filteredInstances = vipInstances.stream().filter(ii -> ii.getStatus() == InstanceStatus.UP)
                         .collect(Collectors.toCollection(() -> new ArrayList<>(vipInstances.size())));
             } else {
