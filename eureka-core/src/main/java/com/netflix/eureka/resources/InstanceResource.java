@@ -49,6 +49,10 @@ import org.slf4j.LoggerFactory;
  * @author Karthik Ranganathan, Greg Kim
  *
  */
+
+/**
+ * Eureka客户端定时向服务端发起服务续约的请求，也是通过ServeltContainer来接待请求，请求中携带了当前续约服务的状态和最后修改时间，ServeltContainer最终会调用 InstanceResource来处理请求
+ */
 @Produces({"application/xml", "application/json"})
 public class InstanceResource {
     private static final Logger logger = LoggerFactory
@@ -88,19 +92,20 @@ public class InstanceResource {
     }
 
     /**
+     * 来自客户端实例的续订租约的put请求
      * A put request for renewing lease from a client instance.
      *
-     * @param isReplication
+     * @param isReplication     请求头isreplicated 是否是从其他节点复制的
      *            a header parameter containing information whether this is
      *            replicated from other nodes.
-     * @param overriddenStatus
+     * @param overriddenStatus  覆盖状态
      *            overridden status if any.
-     * @param status
+     * @param status    续约的服务状态，一般都是UP
      *            the {@link InstanceStatus} of the instance.
-     * @param lastDirtyTimestamp
+     * @param lastDirtyTimestamp    此实例信息更新的最后时间戳
      *            last timestamp when this instance information was updated.
      * @return response indicating whether the operation was a success or
-     *         failure.
+     *         failure.指示操作是成功还是失败的响应。
      */
     @PUT
     public Response renewLease(
@@ -108,14 +113,18 @@ public class InstanceResource {
             @QueryParam("overriddenstatus") String overriddenStatus,
             @QueryParam("status") String status,
             @QueryParam("lastDirtyTimestamp") String lastDirtyTimestamp) {
+        //是否是其他节点复制
         boolean isFromReplicaNode = "true".equals(isReplication);
+        //执行续约流程
         boolean isSuccess = registry.renew(app.getName(), id, isFromReplicaNode);
 
         // Not found in the registry, immediately ask for a register
         if (!isSuccess) {
+            //没续约成功，返回NOT_FOUND状态
             logger.warn("Not Found (Renew): {} - {}", app.getName(), id);
             return Response.status(Status.NOT_FOUND).build();
         }
+        // 检查是否需要根据最后更新间戳进行同步，客户端实例可能已更改了某些值
         // Check if we need to sync based on dirty time stamp, the client
         // instance might have changed some value
         Response response;
@@ -126,6 +135,7 @@ public class InstanceResource {
                     && (overriddenStatus != null)
                     && !(InstanceStatus.UNKNOWN.name().equals(overriddenStatus))
                     && isFromReplicaNode) {
+                //修改服务端维护的注册表中注册的服务的覆盖的状态
                 registry.storeOverriddenStatusIfRequired(app.getAppName(), id, InstanceStatus.valueOf(overriddenStatus));
             }
         } else {
@@ -266,6 +276,8 @@ public class InstanceResource {
     }
 
     /**
+     * 当Eureka Client 客户端当服务关闭，触发客户端服务下线方法，客户端执行一系列下线逻辑后会向Eureka Server服务端发送服务下线请求，
+     * 服务端处理下线的请求是在com.netflix.eureka.resources.InstanceResource#cancelLease方法中
      * Handles cancellation of leases for this particular instance.
      *
      * @param isReplication
@@ -278,6 +290,7 @@ public class InstanceResource {
     public Response cancelLease(
             @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {
         try {
+            //调用 InstanceRegistry的 cancel 方法下线服务
             boolean isSuccess = registry.cancel(app.getName(), id,
                 "true".equals(isReplication));
 

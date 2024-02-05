@@ -92,12 +92,14 @@ public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClien
 
     @Override
     public EurekaHttpResponse<Void> register(InstanceInfo info) {
+        //请求地址
         String urlPath = "apps/" + info.getAppName();
         Response response = null;
         try {
             Builder resourceBuilder = jerseyClient.target(serviceUrl).path(urlPath).request();
             addExtraProperties(resourceBuilder);
             addExtraHeaders(resourceBuilder);
+            //把InstanceInfo作为参数，发送post请求提交服务注册
             response = resourceBuilder
                     .accept(MediaType.APPLICATION_JSON)
                     .acceptEncoding("gzip")
@@ -136,13 +138,16 @@ public abstract class AbstractJersey3EurekaHttpClient implements EurekaHttpClien
 
     @Override
     public EurekaHttpResponse<InstanceInfo> sendHeartBeat(String appName, String id, InstanceInfo info, InstanceStatus overriddenStatus) {
+        //发送地址
         String urlPath = "apps/" + appName + '/' + id;
         Response response = null;
         try {
             //请求参数有两个：Eureka client自身状态、自身关键信息（状态、元数据等）最后一次变化的时间
             WebTarget webResource = jerseyClient.target(serviceUrl)
                     .path(urlPath)
+                    //状态
                     .queryParam("status", info.getStatus().toString())
+                    //最后更新时间
                     .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString());
             if (overriddenStatus != null) {
                 webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name());

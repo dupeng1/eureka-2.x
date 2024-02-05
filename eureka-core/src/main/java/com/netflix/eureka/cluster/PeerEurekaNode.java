@@ -131,11 +131,22 @@ public class PeerEurekaNode {
      *            that is send to this instance.
      * @throws Exception
      */
+    /**
+     * 1、把InstanceInfo注册实例封装成InstanceReplicationTask实例复制任务，
+     * 2、交给batchingDispatcher批量任务调度器去执行，replicationClient是HttpReplicationClient，它的默认实现是JerseyEurekaHttpClient，
+     * 3、底层会调用AbstractJerseyEurekaHttpClient#register的方法完成实例的注册，这里其实就和当时我们分析Eureka Client 服务注册的最后注册请求一样了
+     * @param info
+     * @throws Exception
+     */
     public void register(final InstanceInfo info) throws Exception {
+        //到期时间，当前时间加上30s过期
         long expiryTime = System.currentTimeMillis() + getLeaseRenewalOf(info);
+        //封装InstanceReplicationTask 实例赋值任务到调度器中
         batchingDispatcher.process(
                 taskId("register", info),
                 new InstanceReplicationTask(targetHost, Action.Register, info, null, true) {
+                    //复制器客户端 HttpReplicationClient(JerseyReplicationClient)，执行注册
+                    //调用AbstractJerseyEurekaHttpClient#register
                     public EurekaHttpResponse<Void> execute() {
                         return replicationClient.register(info);
                     }
@@ -191,28 +202,45 @@ public class PeerEurekaNode {
      *            the overridden status information if any of the instance.
      * @throws Throwable
      */
+    /**
+     * 1、创建一个InstanceReplicationTask实例复制任务
+     * 2、任务通过调用replicationClient.sendHeartBeat 发送心跳信息
+     * 3、如果发送失败，出现404错误会先走注册流程
+     * 4、调用分配调度器执行任务
+     * @param appName
+     * @param id
+     * @param info
+     * @param overriddenStatus
+     * @param primeConnection
+     * @throws Throwable
+     */
     public void heartbeat(final String appName, final String id,
                           final InstanceInfo info, final InstanceStatus overriddenStatus,
                           boolean primeConnection) throws Throwable {
         if (primeConnection) {
+            //根据调用传入的参数，这里是false，不会执行下面的代码，除非是走Aws亚马逊才是true
             // We do not care about the result for priming request.
             replicationClient.sendHeartBeat(appName, id, info, overriddenStatus);
             return;
         }
+        //创建复制任务
         ReplicationTask replicationTask = new InstanceReplicationTask(targetHost, Action.Heartbeat, info, overriddenStatus, false) {
             @Override
             public EurekaHttpResponse<InstanceInfo> execute() throws Throwable {
+                //执行心跳发送，参数：服务名，服务id，实例信息InstanceInfo ，服务状态
                 return replicationClient.sendHeartBeat(appName, id, info, overriddenStatus);
             }
 
             @Override
             public void handleFailure(int statusCode, Object responseEntity) throws Throwable {
+                //如果发送失败
                 super.handleFailure(statusCode, responseEntity);
                 if (statusCode == 404) {
                     logger.warn("{}: missing entry.", getTaskName());
                     if (info != null) {
                         logger.warn("{}: cannot find instance id {} and hence replicating the instance with status {}",
                                 getTaskName(), info.getId(), info.getStatus());
+                        //这里调用注册方法
                         register(info);
                     }
                 } else if (config.shouldSyncWhenTimestampDiffers()) {
@@ -224,6 +252,7 @@ public class PeerEurekaNode {
             }
         };
         long expiryTime = System.currentTimeMillis() + getLeaseRenewalOf(info);
+        //分批调度程序，执行任务
         batchingDispatcher.process(taskId("heartbeat", info), replicationTask, expiryTime);
     }
 

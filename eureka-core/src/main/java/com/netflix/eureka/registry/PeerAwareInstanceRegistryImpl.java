@@ -435,6 +435,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                           final boolean isReplication) {
         //调用父类的下线方法
         if (super.cancel(appName, id, isReplication)) {
+            //复制到其他的Eureka节点
             replicateToPeers(Action.Cancel, appName, id, null, null, isReplication);
 
             return true;
@@ -453,11 +454,20 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      *            true if this is a replication event from other replica nodes,
      *            false otherwise.
      */
-    //服务注册
+    /**
+     * 注册服务信息 InstanceInfo，并将此信息InstanceInfo复制到所有对等的eureka server节点。如果这是来自其他副本节点的复制事件，则不会复制它。
+     * 1、更新租期失效时间
+     * 2、调用super.register服务注册（AbstractInstanceRegistry.register）
+     * 3、调用replicateToPeers把服务实例拷贝到其他Eureka Server节点
+     * @param info
+     * @param isReplication
+     */
     @Override
     public void register(final InstanceInfo info, final boolean isReplication) {
+        //租期失效时间 90 s
         int leaseDuration = Lease.DEFAULT_DURATION_IN_SECS;
         if (info.getLeaseInfo() != null && info.getLeaseInfo().getDurationInSecs() > 0) {
+            //如果服务的租期失效时间大于默认的90s，则重新赋值租期时间
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }
         //调用父类的注册
@@ -472,11 +482,20 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * @see com.netflix.eureka.registry.InstanceRegistry#renew(java.lang.String,
      * java.lang.String, long, boolean)
      */
-    //续约
+    /**
+     * 1是调用super的续约方法
+     * 2是续约成功后，调用replicateToPeers把续约成功的实例信息同步到其他的Eureka节点上，这个方法我们在分析注册流程的时候已经看过，
+     * 不管是注册，续约，取消注册，状态改变等操作都要执行replicateToPeers进行Eureka集群节点之间的数据同步.
+     * @param appName
+     * @param id
+     * @param isReplication
+     * @return
+     */
     public boolean renew(final String appName, final String id, final boolean isReplication) {
         //调用父类的续约
         if (super.renew(appName, id, isReplication)) {
-            //同步到集群中的其他节点
+            //续约的实例信息复制到其他的Eureka节点
+            //注意这里是传入的Action是Action.Heartbeat 心跳
             replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication);
             return true;
         }
@@ -604,13 +623,17 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                     }
                 }
             }
+            //加锁
             synchronized (lock) {
-                //仅当阈值大于当前的预期阈值,或禁用了自我保留时才更新阈值。
+                //只有当阀值大于当前预期值时或者关闭了自我保护模式才更新
                 // Update threshold only if the threshold is greater than the
                 // current expected threshold or if self preservation is disabled.
                 if ((count) > (serverConfig.getRenewalPercentThreshold() * expectedNumberOfClientsSendingRenews)
                         || (!this.isSelfPreservationModeEnabled())) {
+                    //判断如果阈值时候大于预期的阈值 或者 关闭了我保护
+                    //更新每分钟的预期续订次数：服务数 * 2 ，每个客户端30s/次，1分钟2次
                     this.expectedNumberOfClientsSendingRenews = count;
+                    //更新每分钟阈值的续订次数 ：服务数 * 2 * 0.85 (百分比阈值)
                     updateRenewsPerMinThreshold();
                 }
             }
@@ -691,25 +714,31 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * traffic to this node.
      *
      */
-    //集群之间的节点复制
+    //将所有eureka操作复制到对等eureka节点
     private void replicateToPeers(Action action, String appName, String id,
                                   InstanceInfo info /* optional */,
                                   InstanceStatus newStatus /* optional */, boolean isReplication) {
+        //开始计时
         Stopwatch tracer = action.getTimer().start();
         try {
+            //是否是其他节点复制过来的
             if (isReplication) {
+                //最后一分钟的复制次数+1
                 numberOfReplicationsLastMin.increment();
             }
             // If it is a replication already, do not replicate again as this will create a poison replication
+            //如果已经是复制，则不要再次复制
             if (peerEurekaNodes == Collections.EMPTY_LIST || isReplication) {
                 return;
             }
-
+            //遍历集群所有节点
             for (final PeerEurekaNode node : peerEurekaNodes.getPeerEurekaNodes()) {
                 // If the url represents this host, do not replicate to yourself.
+                //如果该URL代表此主机，请不要复制到您自己，当前节点不复制
                 if (peerEurekaNodes.isThisMyUrl(node.getServiceUrl())) {
                     continue;
                 }
+                //复制实例到其他某个Eureka
                 replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node);
             }
         } finally {
@@ -729,22 +758,31 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
         try {
             InstanceInfo infoFromRegistry;
             CurrentRequestVersion.set(Version.V2);
+            //判断请求的是什么操作
             switch (action) {
+                //取消注册，调用 PeerEurekaNode.cancel
                 case Cancel:
                     node.cancel(appName, id);
                     break;
+                //心跳请求，调用PeerEurekaNode.heartbeat
                 case Heartbeat:
+                    //续约心跳，获取服务的状态
                     InstanceStatus overriddenStatus = overriddenInstanceStatusMap.get(id);
+                    //根据名字和id获取实例InstanceInfo
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
+                    //调用PeerEurekaNode.heartbeat方法
                     node.heartbeat(appName, id, infoFromRegistry, overriddenStatus, false);
                     break;
+                //服务注册调用PeerEurekaNode.register
                 case Register:
                     node.register(info);
                     break;
+                //状态修改调用PeerEurekaNode.statusUpdate
                 case StatusUpdate:
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
                     node.statusUpdate(appName, id, newStatus, infoFromRegistry);
                     break;
+                //状态删除调用PeerEurekaNode.deleteStatusOverride
                 case DeleteStatusOverride:
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
                     node.deleteStatusOverride(appName, id, infoFromRegistry);

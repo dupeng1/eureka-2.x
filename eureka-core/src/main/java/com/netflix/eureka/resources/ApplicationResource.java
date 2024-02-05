@@ -49,6 +49,11 @@ import org.slf4j.LoggerFactory;
  * @author Karthik Ranganathan, Greg Kim
  *
  */
+
+/**
+ * 服务实例注册，InstanceInfo是服务注册信息，isReplicationd为true代表是从其他Eureka Server节点复制实例，如果是isReplication为false，代表是Eureka Client注册的。
+ * 最终会调用ApplicationResource实现服务注册，Eureka Server对于Eureka client注册服务实例，获取服务实例的的REST请求的都交给ApplicationResource处理，其中用来服务注册的方法是addInstance
+ */
 @Produces({"application/xml", "application/json"})
 public class ApplicationResource {
     private static final Logger logger = LoggerFactory.getLogger(ApplicationResource.class);
@@ -140,11 +145,19 @@ public class ApplicationResource {
      *            a header parameter containing information whether this is
      *            replicated from other nodes.
      */
+    /**
+     * 注册实例，参数InstanceInfo 是客户端提交的注册信息，请求头中isReplicationd为true代表是从其他Eureka Server节点复制实例，如果是isReplication为false，代表是Eureka Client 注册的
+     * 调用PeerAwareInstanceRegistryImpl.register
+     * @param info
+     * @param isReplication
+     * @return
+     */
     @POST
     @Consumes({"application/json", "application/xml"})
     public Response addInstance(InstanceInfo info,
                                 @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {
         logger.debug("Registering instance {} (replication={})", info.getId(), isReplication);
+        //验证instanceinfo包含所有必需的必填字段
         // validate that the instanceinfo contains all the necessary required fields
         if (isBlank(info.getId())) {
             return Response.status(400).entity("Missing instanceId").build();
@@ -161,7 +174,7 @@ public class ApplicationResource {
         } else if (info.getDataCenterInfo().getName() == null) {
             return Response.status(400).entity("Missing dataCenterInfo Name").build();
         }
-
+        //处理客户端可能在数据缺失的情况下向错误的DataCenterInfo注册的情况
         // handle cases where clients may be registering with bad DataCenterInfo with missing data
         DataCenterInfo dataCenterInfo = info.getDataCenterInfo();
         if (dataCenterInfo instanceof UniqueIdentifier) {
@@ -182,7 +195,7 @@ public class ApplicationResource {
                 }
             }
         }
-        // 注册逻辑
+        //【重要】：这里在调用PeerAwareInstanceRegistry的register注册服务，使用的是实现类：InstanceRegistry
         registry.register(info, "true".equals(isReplication));
         return Response.status(204).build();  // 204 to be backwards compatible
     }

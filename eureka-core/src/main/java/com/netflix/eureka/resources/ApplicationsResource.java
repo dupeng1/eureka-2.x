@@ -99,6 +99,7 @@ public class ApplicationsResource {
     }
 
     /**
+     * 返回所有的应用
      * Get information about all {@link com.netflix.discovery.shared.Applications}.
      *
      * @param version the version of the request.
@@ -124,6 +125,7 @@ public class ApplicationsResource {
         boolean isRemoteRegionRequested = null != regionsStr && !regionsStr.isEmpty();
         String[] regions = null;
         if (!isRemoteRegionRequested) {
+            //注册表全量拉取统计计数增加
             EurekaMonitors.GET_ALL.increment();
         } else {
             regions = regionsStr.toLowerCase().split(",");
@@ -134,29 +136,38 @@ public class ApplicationsResource {
         // Check if the server allows the access to the registry. The server can
         // restrict access if it is not
         // ready to serve traffic depending on various reasons.
+        //检查服务端时候准备好可以被访问
         if (!registry.shouldAllowAccess(isRemoteRegionRequested)) {
             return Response.status(Status.FORBIDDEN).build();
         }
         CurrentRequestVersion.set(Version.toEnum(version));
+        //处理返回的数据类型默认JSON
         KeyType keyType = Key.KeyType.JSON;
         String returnMediaType = MediaType.APPLICATION_JSON;
         if (acceptHeader == null || !acceptHeader.contains(HEADER_JSON_VALUE)) {
+            //请求头么有指定格式，返回XML格式
             keyType = Key.KeyType.XML;
             returnMediaType = MediaType.APPLICATION_XML;
         }
-
+        //创建缓存key
         Key cacheKey = new Key(Key.EntityType.Application,
-                ResponseCacheImpl.ALL_APPS,
+                ResponseCacheImpl.ALL_APPS,//通过ALL_APPS构建key
                 keyType, CurrentRequestVersion.get(), EurekaAccept.fromString(eurekaAccept), regions
         );
 
         Response response;
+        //这里判断是否是GZIP格式，返回结果的编码类型不一样，获取方式是一致的
         if (acceptEncoding != null && acceptEncoding.contains(HEADER_GZIP_VALUE)) {
+            //如果格式是gzip，调用responseCache.getGZIP(cacheKey)获取
+            //底层会从一个ConcurrentMap<Key, Value> readOnlyCacheMap 只读缓存中去获取全量注册表
+            //responseCache.getGZIP(cacheKey)最终会调用 com.netflix.eureka.registry.ResponseCacheImpl#getValue
             response = Response.ok(responseCache.getGZIP(cacheKey))
                     .header(HEADER_CONTENT_ENCODING, HEADER_GZIP_VALUE)
                     .header(HEADER_CONTENT_TYPE, returnMediaType)
                     .build();
         } else {
+            //普通获取responseCache.get(cacheKey)
+            //底层会从一个ConcurrentMap<Key, Value> readOnlyCacheMap 只读缓存中去获取全量注册表
             response = Response.ok(responseCache.get(cacheKey))
                     .build();
         }
@@ -165,6 +176,7 @@ public class ApplicationsResource {
     }
 
     /**
+     * 获取Applications服务注册表中有改变的服务，注册，取消，状态更改和过期都会造成服务的改变
      * Get information about all delta changes in {@link com.netflix.discovery.shared.Applications}.
      *
      * <p>
@@ -205,6 +217,7 @@ public class ApplicationsResource {
 
         // If the delta flag is disabled in discovery or if the lease expiration
         // has been disabled, redirect clients to get all instances
+        //如果禁用了Delta注册表差异化拉取，或者服务不可访问，返回拒绝
         if ((serverConfig.shouldDisableDelta()) || (!registry.shouldAllowAccess(isRemoteRegionRequested))) {
             return Response.status(Status.FORBIDDEN).build();
         }
@@ -219,21 +232,23 @@ public class ApplicationsResource {
         }
 
         CurrentRequestVersion.set(Version.toEnum(version));
+        //处理反会的数据格式JSON默认
         KeyType keyType = Key.KeyType.JSON;
         String returnMediaType = MediaType.APPLICATION_JSON;
         if (acceptHeader == null || !acceptHeader.contains(HEADER_JSON_VALUE)) {
             keyType = Key.KeyType.XML;
             returnMediaType = MediaType.APPLICATION_XML;
         }
-
+        //构建缓存key
         Key cacheKey = new Key(Key.EntityType.Application,
-                ResponseCacheImpl.ALL_APPS_DELTA,
+                ResponseCacheImpl.ALL_APPS_DELTA,   //通过ALL_APPS_DELTA构建key
                 keyType, CurrentRequestVersion.get(), EurekaAccept.fromString(eurekaAccept), regions
         );
 
         final Response response;
 
         if (acceptEncoding != null && acceptEncoding.contains(HEADER_GZIP_VALUE)) {
+            //从responseCache获取内容
              response = Response.ok(responseCache.getGZIP(cacheKey))
                     .header(HEADER_CONTENT_ENCODING, HEADER_GZIP_VALUE)
                     .header(HEADER_CONTENT_TYPE, returnMediaType)

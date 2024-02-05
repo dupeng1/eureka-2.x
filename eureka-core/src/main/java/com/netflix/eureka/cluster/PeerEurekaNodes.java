@@ -81,7 +81,7 @@ public abstract class PeerEurekaNodes {
     public int getMinNumberOfAvailablePeers() {
         return serverConfig.getHealthStatusMinNumberOfAvailablePeers();
     }
-    //开始
+    //开始，默认10m/次定时更新Eureka集群节点
     public void start() {
         // 创建一个名字为Eureka-PeerNodesUpdater"单线程的定时执行器
         taskExecutor = Executors.newSingleThreadScheduledExecutor(
