@@ -26,8 +26,12 @@ import java.util.List;
 /**
  * @author Tomasz Bak
  */
-public interface PeerAwareInstanceRegistry extends InstanceRegistry {
 
+/**
+ * 翻译为“对等感知实例注册表” ，应用对象注册表接口，实现了 Eureka-Server 集群内注册信息同步功能
+ */
+public interface PeerAwareInstanceRegistry extends InstanceRegistry {
+    //初始化PeerEurekaNodes集群节点
     void init(PeerEurekaNodes peerEurekaNodes) throws Exception;
 
     /**
@@ -35,6 +39,7 @@ public interface PeerAwareInstanceRegistry extends InstanceRegistry {
      * operation fails over to other nodes until the list is exhausted if the
      * communication fails.
      */
+    //注册表信息同步，如果节点之间通信失败，列表中耗尽该操作故障转移到其他节点
     int syncUp();
 
     /**
@@ -47,9 +52,10 @@ public interface PeerAwareInstanceRegistry extends InstanceRegistry {
      * @return false - if the instances count from a replica transfer returned
      *         zero and if the wait time has not elapsed, otherwise returns true
      */
+    //检查是否有访问权限
      boolean shouldAllowAccess(boolean remoteRegionRequired);
-
+    //注册InstanceInfo到其他Eureka节点
      void register(InstanceInfo info, boolean isReplication);
-
+    //修改状态
      void statusUpdate(final String asgName, final ASGResource.ASGStatus newStatus, final boolean isReplication);
 }

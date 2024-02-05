@@ -112,8 +112,10 @@ public class ResponseCacheImpl implements ResponseCache {
                 }
             });
 
+    //只读缓存
     private final ConcurrentMap<Key, Value> readOnlyCacheMap = new ConcurrentHashMap<Key, Value>();
 
+    //读写缓存
     private final LoadingCache<Key, Value> readWriteCacheMap;
     private final boolean shouldUseReadOnlyResponseCache;
     private final AbstractInstanceRegistry registry;
@@ -123,9 +125,10 @@ public class ResponseCacheImpl implements ResponseCache {
     ResponseCacheImpl(EurekaServerConfig serverConfig, ServerCodecs serverCodecs, AbstractInstanceRegistry registry) {
         this.serverConfig = serverConfig;
         this.serverCodecs = serverCodecs;
+        //获取配置，是否是只读缓存，默认true，拉取注册表的时候还会从只读缓存拉取
         this.shouldUseReadOnlyResponseCache = serverConfig.shouldUseReadOnlyResponseCache();
         this.registry = registry;
-
+        //获取响应缓存更新时间间隔 30s
         long responseCacheUpdateIntervalMs = serverConfig.getResponseCacheUpdateIntervalMs();
         // readWriteCacheMap 初始化，设置缓存过期时间，和默认加载方法
         this.readWriteCacheMap =
@@ -154,9 +157,9 @@ public class ResponseCacheImpl implements ResponseCache {
                                 return value;
                             }
                         });
-
+        //如果使用只读响应缓存，
         if (shouldUseReadOnlyResponseCache) {
-            // 定时更新缓存readWriteCacheMap 到readOnlyCacheMap
+            //每隔responseCacheUpdateIntervalMs=30s执行getCacheUpdateTask
             timer.schedule(getCacheUpdateTask(),
                     new Date(((System.currentTimeMillis() / responseCacheUpdateIntervalMs) * responseCacheUpdateIntervalMs)
                             + responseCacheUpdateIntervalMs),
@@ -175,6 +178,7 @@ public class ResponseCacheImpl implements ResponseCache {
         return new TimerTask() {
             @Override
             public void run() {
+                //如果数据不一致，从readWriteCacheMap缓存更新readOnlyCacheMap缓存
                 logger.debug("Updating the client cache from response cache");
                 for (Key key : readOnlyCacheMap.keySet()) {
                     if (logger.isDebugEnabled()) {

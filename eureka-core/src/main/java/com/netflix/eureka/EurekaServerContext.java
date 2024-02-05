@@ -25,19 +25,19 @@ import com.netflix.eureka.resources.ServerCodecs;
  * @author David Liu
  */
 public interface EurekaServerContext {
-
+    //初始化
     void initialize() throws Exception;
-
+    //关闭
     void shutdown() throws Exception;
-
+    //获取服务配置
     EurekaServerConfig getServerConfig();
-
+    //获取集群节点管理管理类
     PeerEurekaNodes getPeerEurekaNodes();
-
+    //服务器编解码器
     ServerCodecs getServerCodecs();
-
+    //服务注册器
     PeerAwareInstanceRegistry getRegistry();
-
+    //instanceInfo实例信息管理器
     ApplicationInfoManager getApplicationInfoManager();
 
 }

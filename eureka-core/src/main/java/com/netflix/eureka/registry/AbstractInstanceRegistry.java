@@ -75,6 +75,11 @@ import static com.netflix.eureka.util.EurekaMonitors.*;
  * @author Karthik Ranganathan
  *
  */
+
+/**
+ * InstanceRegistry的实现类，应用对象注册表抽象，处理客户端的注册请求，包括 register注册，Renewals续约，Cancels下线，Expirations过期，
+ * Status Changes状态改变，服务注册表以增量的方式增加
+ */
 public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AbstractInstanceRegistry.class);
 

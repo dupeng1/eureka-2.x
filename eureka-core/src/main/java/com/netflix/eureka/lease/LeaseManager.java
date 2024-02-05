@@ -33,6 +33,7 @@ import com.netflix.eureka.registry.AbstractInstanceRegistry;
  *
  * @param <T>
  */
+//租约管理器接口
 public interface LeaseManager<T> {
 
     /**
@@ -44,6 +45,7 @@ public interface LeaseManager<T> {
      * @param isReplication
      *            - whether this is a replicated entry from another eureka node.
      */
+    //注册
     void register(T r, int leaseDuration, boolean isReplication);
 
     /**
@@ -58,6 +60,7 @@ public interface LeaseManager<T> {
      *            - whether this is a replicated entry from another eureka node.
      * @return true, if the operation was successful, false otherwise.
      */
+    //取消，下线
     boolean cancel(String appName, String id, boolean isReplication);
 
     /**
@@ -70,10 +73,12 @@ public interface LeaseManager<T> {
      *            - whether this is a replicated entry from another ds node
      * @return whether the operation of successful
      */
+    //续约
     boolean renew(String appName, String id, boolean isReplication);
 
     /**
      * Evict {@link T}s with expired {@link Lease}(s).
      */
+    //过期
     void evict();
 }

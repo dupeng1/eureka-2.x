@@ -64,10 +64,10 @@ public class DefaultEurekaServerContext implements EurekaServerContext {
     @Override
     public void initialize() {
         logger.info("Initializing ...");
-        // 同步集群中Eureka Server实例信息
+        // 开始集群节点更新，定时更新Eureka集群中的节点
         peerEurekaNodes.start();
         try {
-            // PeerAwareInstanceRegistryImpl#init 初始化
+            // 服务注册器初始化
             registry.init(peerEurekaNodes);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -79,7 +79,9 @@ public class DefaultEurekaServerContext implements EurekaServerContext {
     @Override
     public void shutdown() {
         logger.info("Shutting down ...");
+        //执行注册器的关闭流程
         registry.shutdown();
+        //执行集群节点的关闭
         peerEurekaNodes.shutdown();
         ServoControl.shutdown();
         EurekaMonitors.shutdown();
