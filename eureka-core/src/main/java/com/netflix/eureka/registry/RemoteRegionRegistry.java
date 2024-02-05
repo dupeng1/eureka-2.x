@@ -69,6 +69,7 @@ import static com.netflix.eureka.Names.METRIC_REGISTRY_PREFIX;
  * @author Karthik Ranganathan
  *
  */
+//未知
 public class RemoteRegionRegistry implements LookupService<String> {
     private static final Logger logger = LoggerFactory.getLogger(RemoteRegionRegistry.class);
 

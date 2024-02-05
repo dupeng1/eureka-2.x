@@ -991,6 +991,7 @@ public class DiscoveryClient implements EurekaClient {
      *
      * @return true if the registry was fetched
      */
+    // 从服务端拉取数据
     private boolean fetchRegistry(boolean forceFullRegistryFetch) {
         //用Stopwatch做耗时分析
         Stopwatch tracer = FETCH_REGISTRY_TIMER.start();
@@ -1350,6 +1351,7 @@ public class DiscoveryClient implements EurekaClient {
      * Initializes all scheduled tasks.
      */
     private void initScheduledTasks() {
+        // 是否需要拉取数据
         if (clientConfig.shouldFetchRegistry()) {
             // registry cache refresh timer
             //默认30s

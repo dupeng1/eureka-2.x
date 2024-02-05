@@ -26,7 +26,10 @@ import com.netflix.appinfo.InstanceInfo;
  * @param <T> for backward compatibility
 
  */
-//服务查找接口，提供了服务的方法，在客户端EurekaClient继承该接口，在服务端InstanceRegistry继承了该接口
+/**
+ * 服务查找接口，提供了服务的方法，获取应用集合Applications、 应用实例信息集合InstanceInfo
+ * ，在客户端EurekaClient继承该接口，在服务端InstanceRegistry继承了该接口
+ */
 public interface LookupService<T> {
 
     /**

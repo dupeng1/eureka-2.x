@@ -15,8 +15,9 @@ import java.util.Map;
 /**
  * @author Tomasz Bak
  */
-//提供应用实例的注册与发现服务
+//应用实例注册表接口，提供应用实例的注册与发现服务
 public interface InstanceRegistry extends LeaseManager<InstanceInfo>, LookupService<String> {
+    // ====== 开启与关闭相关 ======
     //允许开始传输数据
     void openForTraffic(ApplicationInfoManager applicationInfoManager, int count);
     //关闭
@@ -26,6 +27,8 @@ public interface InstanceRegistry extends LeaseManager<InstanceInfo>, LookupServ
     @Deprecated
     void storeOverriddenStatusIfRequired(String id, InstanceStatus overriddenStatus);
 
+
+    // ====== 应用实例状态变更相关 ======
     void storeOverriddenStatusIfRequired(String appName, String id, InstanceStatus overriddenStatus);
     //更新服务注册状态
     boolean statusUpdate(String appName, String id, InstanceStatus newStatus,
@@ -76,10 +79,15 @@ public interface InstanceRegistry extends LeaseManager<InstanceInfo>, LookupServ
     InstanceInfo getInstanceByAppAndId(String appName, String id, boolean includeRemoteRegions);
     //完全清除注册表
     void clearRegistry();
+
+
+    // ====== 响应缓存相关 ======
     //初始化的响应缓存
     void initializedResponseCache();
     //获取响应缓存
     ResponseCache getResponseCache();
+
+    // ====== 自我保护模式相关 ======
     //最后一分钟续约次数，用作自我保护计算值
     long getNumOfRenewsInLastMin();
     //获取每分钟续约次数，用作自我保护计算值
@@ -91,6 +99,7 @@ public interface InstanceRegistry extends LeaseManager<InstanceInfo>, LookupServ
     //最近取消的实例
     List<Pair<Long, String>> getLastNCanceledInstances();
 
+    // ====== 调试/监控相关 ======
     /**
      * Checks whether lease expiration is enabled.
      * @return true if enabled

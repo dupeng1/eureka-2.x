@@ -84,6 +84,8 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AbstractInstanceRegistry.class);
 
     private static final String[] EMPTY_STR_ARRAY = new String[0];
+
+    //相当于服务端的注册表，维护所有服务的注册信息，第一层Map的key是服务的应用名称，value也是一个map,其中key是实例id,value是实例的详细信息(Lease)
     private final ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>> registry
             = new ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>>();
     protected Map<String, RemoteRegionRegistry> regionNameVSRemoteRegistry = new HashMap<String, RemoteRegionRegistry>();
@@ -203,6 +205,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
      * @see com.netflix.eureka.lease.LeaseManager#register(java.lang.Object, int, boolean)
      */
     /**
+     * 注册实例，更新实例租约信息
      * 1、判断当前服务是否已经被注册，如果是，则以最后更新时间为准，选择更新时间靠后的服务实例进行注册
      * 2、维护实例的租约信息Lease，并放到Eureka Server本地维护维护的registry注册表中，本质是一个Map（ConcurrentHashMap<String, Map<String, Lease>>）
      * 3、如果是服务是新注册的，把注册的实例封装成Leaset存储到registry注册表中，并更新每分钟续约阀值numberOfRenewsPerMinThreshold
@@ -221,6 +224,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
             //根据注册的服务的名字取本地服务注册表中获取服务注册信息，如果该服务已经被注册了，那么registry中将会存在它
             Map<String, Lease<InstanceInfo>> gMap = registry.get(registrant.getAppName());
             REGISTER.increment(isReplication);
+            // 第一次注册时还不存在，所以 new 一个
             if (gMap == null) {
                 //如果该服务实例没被注册，就把服务实例注册到本地的registry中，本质是一个Map
                 final ConcurrentHashMap<String, Lease<InstanceInfo>> gNewMap = new ConcurrentHashMap<String, Lease<InstanceInfo>>();
@@ -269,13 +273,14 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 }
                 logger.debug("No previous lease information found; it is new registration");
             }
+            //新的心跳续约对象，包括注册信息，最后操作时间，注册事件，过期时间，剔除时间
             //创建租约对象，把注册实例和租期放进去
             Lease<InstanceInfo> lease = new Lease<>(registrant, leaseDuration);
             if (existingLease != null) {
                 //设置服务上线时间
                 lease.setServiceUpTimestamp(existingLease.getServiceUpTimestamp());
             }
-            //以注册的实例的ID为key把服务实例存封装到 Map
+            // 将新对象放入注册表
             gMap.put(registrant.getId(), lease);
             //添加到注册队列
             recentRegisteredQueue.add(new Pair<Long, String>(
@@ -453,7 +458,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
         }
         //如果没找到服务，返回false
         if (leaseToRenew == null) {
-            //续约服务没找到的计数器增加
+            //续约服务没找到的计数器增加，则重新注册续约
             RENEW_NOT_FOUND.increment(isReplication);
             logger.warn("DS: Registry: lease doesn't exist, registering resource: {} - {}", appName, id);
             return false;
@@ -466,7 +471,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                 //获取服务的状态
                 InstanceStatus overriddenInstanceStatus = this.getOverriddenInstanceStatus(
                         instanceInfo, leaseToRenew, isReplication);
-                //如果服务的状态是UNKNOWN，说明服务可能被删除了，需要重新注册，返回false
+                //看是否处于宕机状态，如果服务的状态是UNKNOWN，说明服务可能被删除了，需要重新注册，返回false
                 if (overriddenInstanceStatus == InstanceStatus.UNKNOWN) {
                     logger.info("Instance status UNKNOWN possibly due to deleted override for instance {}"
                             + "; re-register required", instanceInfo.getId());
@@ -701,7 +706,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
     public void evict(long additionalLeaseMs) {
         logger.debug("Running the evict task");
-
+        // 是否需要开启自我保护机制，如果需要，那么直接RETURE， 不需要继续往下执行了
         if (!isLeaseExpirationEnabled()) {
             //如果没启用租约到期，直接返回
             logger.debug("DS: lease expiration is currently disabled.");

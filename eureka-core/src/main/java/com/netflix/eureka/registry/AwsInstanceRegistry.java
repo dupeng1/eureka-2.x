@@ -39,6 +39,7 @@ import jakarta.inject.Singleton;
  *
  * @author David Liu
  */
+//主要用于亚马逊 AWS，跳过
 @Singleton
 public class AwsInstanceRegistry extends PeerAwareInstanceRegistryImpl {
 

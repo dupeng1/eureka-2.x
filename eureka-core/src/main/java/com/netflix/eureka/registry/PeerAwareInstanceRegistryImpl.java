@@ -268,6 +268,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                         if (isRegisterable(instance)) {
                             //获取InstanceInfo之后注册到当前节点，
                             // 保存到 ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>> registry 中缓存起来
+                            //这里register的isReplication是true
                             register(instance, instance.getLeaseInfo().getDurationInSecs(), true);
                             count++;
                         }
@@ -608,7 +609,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * {@link EurekaServerConfig#getRenewalPercentThreshold()} of renewals
      * received per minute {@link #getNumOfRenewsInLastMin()}.
      */
-    //更新续约阈值
+    //更新续约阈值，每隔15分钟，更新一次自我保护阈值
     private void updateRenewalThreshold() {
         try {
             //获取到注册表
@@ -619,6 +620,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                 for (InstanceInfo instance : app.getInstances()) {
                     // 判断注册服务是否注册到本实例
                     if (this.isRegisterable(instance)) {
+                        // 计算应用实例数
                         ++count;
                     }
                 }
@@ -628,6 +630,8 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                 //只有当阀值大于当前预期值时或者关闭了自我保护模式才更新
                 // Update threshold only if the threshold is greater than the
                 // current expected threshold or if self preservation is disabled.
+                //当节点数量count大于最小续约数量时，或者没有开启自我保护机制的情况下，
+                // 重新计算expectedNumberOfClientsSendingRenews和numberOfRenewsPerMinThreshold
                 if ((count) > (serverConfig.getRenewalPercentThreshold() * expectedNumberOfClientsSendingRenews)
                         || (!this.isSelfPreservationModeEnabled())) {
                     //判断如果阈值时候大于预期的阈值 或者 关闭了我保护
@@ -714,7 +718,10 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * traffic to this node.
      *
      */
-    //将所有eureka操作复制到对等eureka节点
+    /**
+     * 将所有eureka操作复制到对等eureka节点，isReplication用来标识这次请求是不是其他节点复制过来的，
+     * 可以看到如果peerEurekaNodes为空，或者isReplication为true的话，则不继续往下
+     */
     private void replicateToPeers(Action action, String appName, String id,
                                   InstanceInfo info /* optional */,
                                   InstanceStatus newStatus /* optional */, boolean isReplication) {
@@ -728,6 +735,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             }
             // If it is a replication already, do not replicate again as this will create a poison replication
             //如果已经是复制，则不要再次复制
+            // 如果当前节点接收到的实例信息本就是另一个节点同步来的，则不会继续同步给其他节点，避免形成“广播效应”，造成死循环
             if (peerEurekaNodes == Collections.EMPTY_LIST || isReplication) {
                 return;
             }
@@ -751,7 +759,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * replication traffic to this node.
      *
      */
-    //集群之间的节点复制
+    //集群之间的节点复制，这里根据不同的Action来调用PeerEurekaNode的不同方法
     private void replicateInstanceActionsToPeers(Action action, String appName,
                                                  String id, InstanceInfo info, InstanceStatus newStatus,
                                                  PeerEurekaNode node) {

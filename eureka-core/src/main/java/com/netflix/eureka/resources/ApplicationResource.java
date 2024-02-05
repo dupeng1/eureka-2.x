@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
  */
 
 /**
+ * 相当于 MVC 中的 controller
  * 服务实例注册，InstanceInfo是服务注册信息，isReplicationd为true代表是从其他Eureka Server节点复制实例，如果是isReplication为false，代表是Eureka Client注册的。
  * 最终会调用ApplicationResource实现服务注册，Eureka Server对于Eureka client注册服务实例，获取服务实例的的REST请求的都交给ApplicationResource处理，其中用来服务注册的方法是addInstance
  */

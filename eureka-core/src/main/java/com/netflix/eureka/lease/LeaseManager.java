@@ -33,7 +33,16 @@ import com.netflix.eureka.registry.AbstractInstanceRegistry;
  *
  * @param <T>
  */
-//租约管理器接口
+/**
+ * 实例租约管理器接口，根据租约更新的动作类型操作实例的租约信息，提供服务实例基于时间可控性的管理（租约管理）<br>
+ * 1、register ： 服务注册进来设置租约的serviceUp<br>
+ * 2、cancel : 服务下线，设置实例租约的cancel<br>
+ * 3、renew ： 服务报活（心跳检测）设置租约的renew<br>
+ * 4、evict : 遍历注册表通过实例租约isExpired方法校验是否过期，过期强制服务下线操作<br>
+ * 其中 1-3 是Eureka 客户端发起操作，4,为服务端定时任务轮询服务注册表，主动剔除过期实例。<br>
+ * LeaseManager默认实现类 AbstractInstanceRegistry<br>
+ * @param <T>
+ */
 public interface LeaseManager<T> {
 
     /**
@@ -45,7 +54,7 @@ public interface LeaseManager<T> {
      * @param isReplication
      *            - whether this is a replicated entry from another eureka node.
      */
-    //注册
+    //注册实例，更新实例租约信息
     void register(T r, int leaseDuration, boolean isReplication);
 
     /**
@@ -60,7 +69,7 @@ public interface LeaseManager<T> {
      *            - whether this is a replicated entry from another eureka node.
      * @return true, if the operation was successful, false otherwise.
      */
-    //取消，下线
+    //剔除实例时，更新实例租约信息
     boolean cancel(String appName, String id, boolean isReplication);
 
     /**
@@ -73,12 +82,12 @@ public interface LeaseManager<T> {
      *            - whether this is a replicated entry from another ds node
      * @return whether the operation of successful
      */
-    //续约
+    //刷新实例时更新实例租约信息
     boolean renew(String appName, String id, boolean isReplication);
 
     /**
      * Evict {@link T}s with expired {@link Lease}(s).
      */
-    //过期
+    //剔除已过期的租约实例信息
     void evict();
 }

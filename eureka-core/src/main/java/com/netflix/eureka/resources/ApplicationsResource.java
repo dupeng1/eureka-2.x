@@ -51,6 +51,10 @@ import com.netflix.eureka.util.EurekaMonitors;
  * @author Karthik Ranganathan, Greg Kim
  *
  */
+
+/**
+ * 相当于 MVC 中的 controller
+ */
 @Path("/{version}/apps")
 @Produces({"application/xml", "application/json"})
 public class ApplicationsResource {
@@ -99,7 +103,7 @@ public class ApplicationsResource {
     }
 
     /**
-     * 返回所有的应用
+     * 返回所有的应用，首先会根据请求信息构建缓存Key，根据key从缓存中获取数据，并设置到response中返回给Client端
      * Get information about all {@link com.netflix.discovery.shared.Applications}.
      *
      * @param version the version of the request.

@@ -32,18 +32,44 @@ import com.netflix.eureka.registry.AbstractInstanceRegistry;
  */
 public class Lease<T> {
 
+    /**
+     * 实例针对租约变化的动作类型
+     */
     enum Action {
-        Register, Cancel, Renew
+        //实例注册
+        Register,
+        //实例取消
+        Cancel,
+        //实例刷新
+        Renew
     };
 
+    /**
+    * 默认的租约有效时长 90s,服务之间心跳请求 30s 一次，如果 90s 还没发生，就说明挂了
+     */
     public static final int DEFAULT_DURATION_IN_SECS = 90;
 
+    /**
+     * 实例信息，此处默认为 InstanceInfo
+     */
     private T holder;
+    /**
+     * 取消注册时间
+     */
     private long evictionTimestamp;
+    /**
+     * 注册时间
+     */
     private long registrationTimestamp;
     private long serviceUpTimestamp;
     // Make it volatile so that the expiration task would see this quicker
+    /**
+     * 最后更新时间
+     */
     private volatile long lastUpdateTimestamp;
+    /**
+     * 租约的有效时长，默认90s
+     */
     private long duration;
 
     public Lease(T r, int durationInSecs) {
@@ -59,6 +85,7 @@ public class Lease<T> {
      * associated {@link T} during registration, otherwise default duration is
      * {@link #DEFAULT_DURATION_IN_SECS}.
      */
+    //刷新租约的时间信息，租约续订更新最后更新时间为当前时间+租约有效时长
     public void renew() {
         lastUpdateTimestamp = System.currentTimeMillis() + duration;
 
@@ -67,6 +94,7 @@ public class Lease<T> {
     /**
      * Cancels the lease by updating the eviction time.
      */
+    //注册列表剔除当前服务，更新租约的时间信息
     public void cancel() {
         if (evictionTimestamp <= 0) {
             evictionTimestamp = System.currentTimeMillis();
@@ -77,6 +105,7 @@ public class Lease<T> {
      * Mark the service as up. This will only take affect the first time called,
      * subsequent calls will be ignored.
      */
+    //服务上线时间
     public void serviceUp() {
         if (serviceUpTimestamp == 0) {
             serviceUpTimestamp = System.currentTimeMillis();
@@ -93,6 +122,7 @@ public class Lease<T> {
     /**
      * Checks if the lease of a given {@link com.netflix.appinfo.InstanceInfo} has expired or not.
      */
+    //检测租约是否过期
     public boolean isExpired() {
         return isExpired(0l);
     }
@@ -107,8 +137,9 @@ public class Lease<T> {
      *
      * @param additionalLeaseMs any additional lease time to add to the lease evaluation in ms.
      */
+    //检测租约是否过期
     public boolean isExpired(long additionalLeaseMs) {
-        //evictionTimestamp (剔除时间戳) > 0 || 最后更新时间戳 + 租期(90s) + 补偿时间 。
+        //剔除服务时间>0或当前时间>（最后更新时间+租约有效时长+时间偏差）时 表示租约已失效
         return (evictionTimestamp > 0 || System.currentTimeMillis() > (lastUpdateTimestamp + duration + additionalLeaseMs));
     }
 
