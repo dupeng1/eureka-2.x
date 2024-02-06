@@ -69,7 +69,7 @@ public interface LeaseManager<T> {
      *            - whether this is a replicated entry from another eureka node.
      * @return true, if the operation was successful, false otherwise.
      */
-    //剔除实例时，更新实例租约信息
+    //剔除实例时，更新实例租约信息，服务实例下线操作触发
     boolean cancel(String appName, String id, boolean isReplication);
 
     /**
@@ -82,7 +82,7 @@ public interface LeaseManager<T> {
      *            - whether this is a replicated entry from another ds node
      * @return whether the operation of successful
      */
-    //刷新实例时更新实例租约信息
+    //刷新实例时更新实例租约信息，服务实例续约操作触发
     boolean renew(String appName, String id, boolean isReplication);
 
     /**

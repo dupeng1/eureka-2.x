@@ -27,8 +27,8 @@ import com.netflix.appinfo.InstanceInfo;
 
  */
 /**
- * 服务查找接口，提供了服务的方法，获取应用集合Applications、 应用实例信息集合InstanceInfo
- * ，在客户端EurekaClient继承该接口，在服务端InstanceRegistry继承了该接口
+ * 服务查找接口，提供了服务的方法，获取应用集合Applications、 应用实例信息集合InstanceInfo，
+ * 在客户端EurekaClient继承该接口，在服务端InstanceRegistry继承了该接口
  */
 public interface LookupService<T> {
 
@@ -40,8 +40,7 @@ public interface LookupService<T> {
      * @return a {@link Application} or null if we couldn't locate any app of
      *         the requested appName
      */
-    //根据appName查找对应的Application对象（该对象维护了一个服务实例列表，即Application对象维护了一个指定应用的服务实例列表的容器。）
-    //获取应用
+    //获取应用，根据appName查找对应的Application对象（该对象维护了一个服务实例列表，即Application对象维护了一个指定应用的服务实例列表的容器。）
     Application getApplication(String appName);
 
     /**
@@ -50,8 +49,7 @@ public interface LookupService<T> {
      *
      * @return {@link Applications}
      */
-    //包装了Eureka服务返回的全部注册信息，其中维护了一个Application对象的集合
-    //获取应用注册表
+    //获取应用注册表，包装了Eureka服务返回的全部注册信息，其中维护了Application对象的集合
     Applications getApplications();
 
     /**

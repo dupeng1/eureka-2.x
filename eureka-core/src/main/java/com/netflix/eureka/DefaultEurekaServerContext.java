@@ -60,6 +60,11 @@ public class DefaultEurekaServerContext implements EurekaServerContext {
         this.applicationInfoManager = applicationInfoManager;
     }
 
+    /**
+     * EurekaServerContext初始化的时候initialize方法被执行，
+     * 调用 peerEurekaNodes.start()开启EurekaServer的初始化，
+     * 然后再调用 peerAwareInstanceRegistry.init(peerEurekaNodes);方法初始化
+     */
     @PostConstruct
     @Override
     public void initialize() {

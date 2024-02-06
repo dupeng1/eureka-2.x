@@ -24,6 +24,7 @@ import com.netflix.eureka.resources.ServerCodecs;
 /**
  * @author David Liu
  */
+//Eureka服务端上下文对象，包含了初始化，关闭，获取服务配置，获取集群节点，获取服务注册器，获取服务信息管理器
 public interface EurekaServerContext {
     //初始化
     void initialize() throws Exception;

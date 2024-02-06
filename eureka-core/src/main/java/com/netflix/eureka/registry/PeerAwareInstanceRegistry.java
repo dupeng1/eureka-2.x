@@ -28,7 +28,7 @@ import java.util.List;
  */
 
 /**
- * 应用对象注册表接口，“对等感知实例注册表”，实现了 Eureka-Server 集群内注册信息同步功能
+ * “对等感知实例注册表”，其实就是服务实例注册器，实现了Eureka-Server集群内注册信息同步功能
  */
 public interface PeerAwareInstanceRegistry extends InstanceRegistry {
     //初始化PeerEurekaNodes集群节点

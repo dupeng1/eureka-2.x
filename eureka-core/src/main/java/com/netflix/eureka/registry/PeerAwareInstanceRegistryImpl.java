@@ -100,7 +100,7 @@ import static com.netflix.eureka.Names.METRIC_REGISTRY_PREFIX;
  */
 
 /**
- * 服务注册器，继承AbstractInstanceRegistry抽象类，实现PeerAwareInstanceRegistry服务注册接口，
+ * 服务实例注册器，继承AbstractInstanceRegistry抽象类，实现PeerAwareInstanceRegistry服务实例注册接口，
  * 包含了服务注册，续约，下线，过期，状态改变等 <br>
  * init初始化：注册表缓存ResponseCache初始化，续约阈值定时更新任务初始化，初始化远程注册表 <br>
  * showdown:执行所有清理和关闭操作 <br>
@@ -173,10 +173,10 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
         // 最后一分钟的复制次数定时器Timer开始
         this.numberOfReplicationsLastMin.start();
         this.peerEurekaNodes = peerEurekaNodes;
-        //初始化ResponseCache ,负责缓存客户端查询的注册表信息 30s/1次，初始化注册表响应缓存
+        //初始化ResponseCache,负责缓存客户端查询的注册表信息，初始化注册表响应缓存
         //初始化了一个ResponseCache响应缓存，ResponseCacheImpl是具体实现
         initializedResponseCache();
-        //续约阈值定时更新任务，15min/1次 调用 updateRenewalThreshold()方法更新，定时更新续约阈值
+        //续约阈值定时更新任务，15min/1次 调用 updateRenewalThreshold()方法更新
         scheduleRenewalThresholdUpdateTask();
         //初始化远程注册表，默认没有远程Region
         initRemoteRegionRegistry();
@@ -268,7 +268,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                         if (isRegisterable(instance)) {
                             //获取InstanceInfo之后注册到当前节点，
                             // 保存到 ConcurrentHashMap<String, Map<String, Lease<InstanceInfo>>> registry 中缓存起来
-                            //这里register的isReplication是true
+                            //这里register的isReplication是true，不会同步到其他节点
                             register(instance, instance.getLeaseInfo().getDurationInSecs(), true);
                             count++;
                         }
@@ -484,8 +484,8 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * java.lang.String, long, boolean)
      */
     /**
-     * 1是调用super的续约方法
-     * 2是续约成功后，调用replicateToPeers把续约成功的实例信息同步到其他的Eureka节点上，这个方法我们在分析注册流程的时候已经看过，
+     * 1、是调用super的续约方法
+     * 2、是续约成功后，调用replicateToPeers把续约成功的实例信息同步到其他的Eureka节点上，
      * 不管是注册，续约，取消注册，状态改变等操作都要执行replicateToPeers进行Eureka集群节点之间的数据同步.
      * @param appName
      * @param id
@@ -556,6 +556,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
 
         }
     }
+    //todo
     //是否启用租约到期
     @Override
     public boolean isLeaseExpirationEnabled() {
@@ -563,6 +564,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             // The self preservation mode is disabled, hence allowing the instances to expire.
             return true;
         }
+        //最近一分钟续约次数>每分钟续约阈值
         return numberOfRenewsPerMinThreshold > 0 && getNumOfRenewsInLastMin() > numberOfRenewsPerMinThreshold;
     }
 
@@ -627,17 +629,16 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
             }
             //加锁
             synchronized (lock) {
-                //只有当阀值大于当前预期值时或者关闭了自我保护模式才更新
                 // Update threshold only if the threshold is greater than the
                 // current expected threshold or if self preservation is disabled.
+                //只有当阀值大于当前预期值时或者关闭了自我保护模式才更新
                 //当节点数量count大于最小续约数量时，或者没有开启自我保护机制的情况下，
                 // 重新计算expectedNumberOfClientsSendingRenews和numberOfRenewsPerMinThreshold
                 if ((count) > (serverConfig.getRenewalPercentThreshold() * expectedNumberOfClientsSendingRenews)
                         || (!this.isSelfPreservationModeEnabled())) {
-                    //判断如果阈值时候大于预期的阈值 或者 关闭了我保护
-                    //更新每分钟的预期续订次数：服务数 * 2 ，每个客户端30s/次，1分钟2次
+                    //更新每分钟的预期续订次数：服务数
                     this.expectedNumberOfClientsSendingRenews = count;
-                    //更新每分钟阈值的续订次数 ：服务数 * 2 * 0.85 (百分比阈值)
+                    //更新每分钟阈值的阈值：服务数 * 0.85 (百分比阈值)
                     updateRenewsPerMinThreshold();
                 }
             }

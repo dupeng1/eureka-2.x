@@ -78,6 +78,11 @@ public interface InstanceRegistry extends LeaseManager<InstanceInfo>, LookupServ
     //根据名字和id获取实例信息
     InstanceInfo getInstanceByAppAndId(String appName, String id, boolean includeRemoteRegions);
     //完全清除注册表
+    //overriddenInstanceStatusMap.clear();	覆盖状态清除
+    //recentCanceledQueue.clear();		最近取消队列
+    //recentRegisteredQueue.clear();	最近注册队列
+    //recentlyChangedQueue.clear();		最近更改队列
+    //registry.clear();					清除注册表
     void clearRegistry();
 
 
@@ -104,7 +109,7 @@ public interface InstanceRegistry extends LeaseManager<InstanceInfo>, LookupServ
      * Checks whether lease expiration is enabled.
      * @return true if enabled
      */
-    //最近过期的实例
+    //是否启用租约到期
     boolean isLeaseExpirationEnabled();
     //是否开启自我保护
     boolean isSelfPreservationModeEnabled();

@@ -77,7 +77,7 @@ import static com.netflix.eureka.util.EurekaMonitors.*;
  */
 
 /**
- * InstanceRegistry的实现类，应用对象注册表抽象，处理客户端的注册请求，包括 register注册，Renewals续约，Cancels下线，Expirations过期，
+ * InstanceRegistry的实现类，应用对象注册表抽象，处理客户端的注册请求，包括register注册，Renewals续约，Cancels下线，Expirations过期，
  * Status Changes状态改变，服务注册表以增量的方式增加
  */
 public abstract class AbstractInstanceRegistry implements InstanceRegistry {
@@ -106,12 +106,15 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
 
     private Timer deltaRetentionTimer = new Timer("Eureka-DeltaRetentionTimer", true);
     private Timer evictionTimer = new Timer("Eureka-EvictionTimer", true);
+    //最近一分钟续约次数
     private final MeasuredRate renewsLastMin;
 
     private final AtomicReference<EvictionTask> evictionTaskRef = new AtomicReference<>();
 
     protected String[] allKnownRemoteRegions = EMPTY_STR_ARRAY;
+    //每分钟续约阈值
     protected volatile int numberOfRenewsPerMinThreshold;
+    //每分钟的预期续约次数
     protected volatile int expectedNumberOfClientsSendingRenews;
 
     protected final EurekaServerConfig serverConfig;
@@ -265,7 +268,7 @@ public abstract class AbstractInstanceRegistry implements InstanceRegistry {
                     //这里在计算服务的续约频率值
                     if (this.expectedNumberOfClientsSendingRenews > 0) {
                         // Since the client wants to register it, increase the number of clients sending renews
-                        //(expectedNumberOfRenewsPerMin)期待的每分钟续订次数,默认是30s/个，给他增加到2，每分钟2个请求
+                        //(expectedNumberOfRenewsPerMin)期待的每分钟续订次数
                         this.expectedNumberOfClientsSendingRenews = this.expectedNumberOfClientsSendingRenews + 1;
                         // 每分钟续约数阈值更新
                         updateRenewsPerMinThreshold();

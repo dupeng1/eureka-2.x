@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 
 /**
- * 用来管理Eureka集群节点PeerEurekaNode生命周期的工具，被DefaultEurekaServerContext 的initialize初始化方法中执行
+ * 用来管理Eureka集群节点PeerEurekaNode生命周期的工具，被DefaultEurekaServerContext的initialize初始化方法中执行
  * 主要定义了eureka集群节点更新逻辑，通过定时任务定时更新，默认10分钟更新一次，更新逻辑是删除旧的节点，添加新的节点，
  * 旧的节点调用shutdown做关闭操作，新的节点调用createPeerEurekaNode进行创建，集群节点最终存储在List<PeerEurekaNode>结构中
  */
@@ -40,9 +40,9 @@ import org.slf4j.LoggerFactory;
 public abstract class PeerEurekaNodes {
 
     private static final Logger logger = LoggerFactory.getLogger(PeerEurekaNodes.class);
-    //注册器
+    //服务注册接口
     protected final PeerAwareInstanceRegistry registry;
-    //服务端配置对象
+    //服务端配置
     protected final EurekaServerConfig serverConfig;
     //客户端配置
     protected final EurekaClientConfig clientConfig;
@@ -95,14 +95,15 @@ public abstract class PeerEurekaNodes {
                 }
         );
         try {
-            //更新集群中的节点中的注册信息
+            //更新集群中的Eureka节点
             updatePeerEurekaNodes(resolvePeerUrls());
             //创建runnable线程，业务逻辑为：updatePeerEurekaNodes(resolvePeerUrls());
             Runnable peersUpdateTask = new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        //更新集群中的节点中的注册信息，默认10分钟更新一次，更新逻辑是删除旧的节点，添加新的节点，旧的节点调用shutdown做关闭操作
+                        //更新集群中的节点中的Eureka节点，默认10分钟更新一次，
+                        //更新逻辑是删除旧的节点，添加新的节点，旧的节点调用shutdown做关闭操作
                         //新的节点调用createPeerEurekaNode进行创建，集群节点最终存储在List结构中
                         updatePeerEurekaNodes(resolvePeerUrls());
                     } catch (Throwable e) {
@@ -126,7 +127,11 @@ public abstract class PeerEurekaNodes {
             logger.info("Replica node URL:  {}", node.getServiceUrl());
         }
     }
-    //关闭，关闭节点更新的定时任务，清空peerEurekaNodes ，peerEurekaNodeUrls ,调用每个节点的shutDown方法
+    //关闭
+    // 1、关闭节点更新的定时任务
+    // 2、清空peerEurekaNodes
+    // 3、peerEurekaNodeUrls
+    // 4、调用每个节点的shutDown方法
     public void shutdown() {
         taskExecutor.shutdown();
         List<PeerEurekaNode> toRemove = this.peerEurekaNodes;
@@ -146,16 +151,18 @@ public abstract class PeerEurekaNodes {
      */
     //基于相同的Zone得到Eureka集群中多个节点的url,过滤掉当前节点
     protected List<String> resolvePeerUrls() {
-        // 当前实例信息
+        // 获取当前实例信息
         InstanceInfo myInfo = applicationInfoManager.getInfo();
         // 获取当前实例所属的zone
         String zone = InstanceInfo.getZone(clientConfig.getAvailabilityZones(clientConfig.getRegion()), myInfo);
+        //==================核心地方
         // 获取当前zone下的eureka server urls
         List<String> replicaUrls = EndpointUtils
                 .getDiscoveryServiceUrls(clientConfig, zone, new EndpointUtils.InstanceInfoBasedUrlRandomizer(myInfo));
         //移除当前eureka节点的url
         int idx = 0;
         while (idx < replicaUrls.size()) {
+            //移除当前eureka节点的url
             if (isThisMyUrl(replicaUrls.get(idx))) {
                 replicaUrls.remove(idx);
             } else {
@@ -172,7 +179,7 @@ public abstract class PeerEurekaNodes {
      * @param newPeerUrls peer node URLs; this collection should have local node's URL filtered out
      */
     /**
-     * 修改集群节点，在定时器中被执行，newPeerUrls是集群中的eureka server节点的url，过滤了本地节点的url
+     * 更新集群节点列表，在定时器中被执行，newPeerUrls是集群中的eureka server节点的url，过滤了本地节点的url
      * 做法是删除老的不可用的节点调用shutDown方法，使用createPeerEurekaNode创建新的节点添加新的节点
      * @param newPeerUrls
      */
@@ -181,13 +188,13 @@ public abstract class PeerEurekaNodes {
             logger.warn("The replica size seems to be empty. Check the route 53 DNS Registry");
             return;
         }
-        //需要关闭的节点
+        //需要关闭的节点，使用之前Eureka节点初始化
         Set<String> toShutdown = new HashSet<>(peerEurekaNodeUrls);
-        //移除掉新的节点，新的节点不需要关闭
+        //之前Eureka节点移除掉当前Eureka节点，即需要关闭的节点
         toShutdown.removeAll(newPeerUrls);
-        //需要添加的节点
+        //需要添加的节点，使用当前Eureka节点初始化
         Set<String> toAdd = new HashSet<>(newPeerUrls);
-        //移除掉老的节点，老的节点不需要添加
+        //当前Eureka节点移除掉之前Eureka节点，即需要添加的节点
         toAdd.removeAll(peerEurekaNodeUrls);
         // 判断集群实例是否有变化，判断方法通过两个差集是否为空，简单方便值得借鉴
         if (toShutdown.isEmpty() && toAdd.isEmpty()) { // No change
@@ -195,7 +202,7 @@ public abstract class PeerEurekaNodes {
         }
 
         // Remove peers no long available
-        //节点集合，本地缓存的所有节点
+        //节点集合，之前Eureka节点
         List<PeerEurekaNode> newNodeList = new ArrayList<>(peerEurekaNodes);
         //如果需要关闭的节点集合不为空
         if (!toShutdown.isEmpty()) {
