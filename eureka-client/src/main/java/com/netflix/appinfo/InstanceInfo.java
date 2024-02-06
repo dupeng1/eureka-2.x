@@ -494,6 +494,7 @@ public class InstanceInfo {
          * @param status the overridden {@link InstanceStatus} of the instance.
          * @return @return the {@link InstanceInfo} builder.
          */
+        //这个overriddenstatus的意思就是用于外部的一些操作，在netflix里头就是用于red/black部署的时候，先把指定服务设置为OUT_OF_SERVICE来故意关闭请求流量
         public Builder setOverriddenStatus(InstanceStatus status) {
             result.overriddenStatus = status;
             return this;
